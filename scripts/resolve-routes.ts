@@ -96,7 +96,7 @@ async function main() {
   lines.push('## Answers to Bhanu\'s 3 questions');
   lines.push('1. **v2 or v1?** v1 — built on the existing `SharedApi` (apigateway.RestApi) in lib/foundation. Reusing it, not rebuilding as HttpApi. Flag if this is a hard blocker on your side.');
   lines.push('2. **IAM or M2M?** AWS_IAM, as you recommended.');
-  lines.push(`3. **Go-live for /prajna/${stage}/api/api-endpoint?** Published as soon as this stack deploys clean AND the bound-route count above reaches 22/28 (the 6 on hold are M16+M18, intentionally excluded until you confirm the unblocks).`);
+  lines.push(`3. **Go-live for /prajna/${stage}/api/api-endpoint?** Published as soon as this stack deploys clean — not gated on bound-route count. Bindable is 14/28 with holds on, 28/28 once M16+M18 lift.`);
   lines.push('');
   lines.push('## Known conflict — needs your input');
   lines.push('`ROUTE_MANIFEST` assumes ARN path `/prajna/{stage}/{moduleId}/{routeId}-fn-arn` for every route. `lib/foundation/constants/ssm-parameters.ts` → `ApprovalParameters` already publishes M13 params under different, hand-named identifiers (e.g. `create-request-function-arn`, not `start-fn-arn`). These will show MISSING-ARN even once M13 is deployed, until one of us renames. Recommend BL modules standardize on the manifest\'s `{routeId}-fn-arn` pattern going forward.');

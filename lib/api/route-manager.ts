@@ -110,12 +110,15 @@ export class RouteManager extends Construct {
         new apigateway.LambdaIntegration(fn, { proxy: true, allowTestInvoke: false }),
         { authorizer, authorizationType },
       );
-
-      new lambda.CfnPermission(this, `Perm-${route.moduleId}-${route.routeId}-${route.method}`, {
+new lambda.CfnPermission(this, `Perm-${route.moduleId}-${route.routeId}-${route.method}`, {
         action: 'lambda:InvokeFunction',
         functionName: route.arn!,
         principal: 'apigateway.amazonaws.com',
-        sourceArn: props.restApi.arnForExecuteApi(route.method, route.path, props.config.apiGateway.stageName),
+        sourceArn: props.restApi.arnForExecuteApi(
+          route.method,
+          route.path.replace(/\{[^}]*\}/g, '*'),
+          props.config.apiGateway.stageName,
+        ),
       });
 
       this.bound.push(route);
