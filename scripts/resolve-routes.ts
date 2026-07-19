@@ -98,8 +98,7 @@ async function main() {
   lines.push('2. **IAM or M2M?** AWS_IAM, as you recommended.');
   lines.push(`3. **Go-live for /prajna/${stage}/api/api-endpoint?** Published as soon as this stack deploys clean — not gated on bound-route count. Bindable is 14/28 with holds on, 28/28 once M16+M18 lift.`);
   lines.push('');
-  lines.push('## Known conflict — needs your input');
-  lines.push('`ROUTE_MANIFEST` assumes ARN path `/prajna/{stage}/{moduleId}/{routeId}-fn-arn` for every route. `lib/foundation/constants/ssm-parameters.ts` → `ApprovalParameters` already publishes M13 params under different, hand-named identifiers (e.g. `create-request-function-arn`, not `start-fn-arn`). These will show MISSING-ARN even once M13 is deployed, until one of us renames. Recommend BL modules standardize on the manifest\'s `{routeId}-fn-arn` pattern going forward.');
+
 
   fs.writeFileSync(path.join(buildDir, `M4-ROUTE-REPORT.${stage}.md`), lines.join('\n'));
 

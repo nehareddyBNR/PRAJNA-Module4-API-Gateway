@@ -86,8 +86,8 @@ const NOTIFICATION_HOLD = 'B-002: blocked on Bhanu confirming M16 self-registrat
 const NOTIFICATION_ROUTES: RouteDefinition[] = [
   { moduleId: ModuleIdentifier.NOTIFICATION, routeId: 'get-notifications', method: 'GET', path: '/notifications', auth: RouteAuth.JWT, hold: NOTIFICATION_HOLD },
   { moduleId: ModuleIdentifier.NOTIFICATION, routeId: 'get-notifications', method: 'GET', path: '/notifications/count', auth: RouteAuth.JWT, hold: NOTIFICATION_HOLD },
-  { moduleId: ModuleIdentifier.NOTIFICATION, routeId: 'mark-read', method: 'PATCH', path: '/notifications/{id}/read', auth: RouteAuth.JWT, hold: NOTIFICATION_HOLD },
   { moduleId: ModuleIdentifier.NOTIFICATION, routeId: 'mark-read', method: 'PATCH', path: '/notifications/{notificationId}/read', auth: RouteAuth.JWT, hold: NOTIFICATION_HOLD },
+  { moduleId: ModuleIdentifier.NOTIFICATION, routeId: 'mark-read', method: 'PATCH', path: '/notifications/read-all', auth: RouteAuth.JWT, hold: NOTIFICATION_HOLD },
   { moduleId: ModuleIdentifier.NOTIFICATION, routeId: 'get-preferences', method: 'GET', path: '/notifications/preferences', auth: RouteAuth.JWT, hold: NOTIFICATION_HOLD },
   { moduleId: ModuleIdentifier.NOTIFICATION, routeId: 'update-preferences', method: 'PUT', path: '/notifications/preferences', auth: RouteAuth.JWT, hold: NOTIFICATION_HOLD },
 ];
