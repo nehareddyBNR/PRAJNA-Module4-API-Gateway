@@ -1,6 +1,6 @@
 ﻿# Module 4 - API Gateway Integration Guide
 
-**Owner:** B. Neha Reddy | **SME:** Balaji | **Status:** Built, synthesized, awaiting BL (M13-M18) deployment | **Last updated:** 2026-07
+**Owner:** B. Neha Reddy | **SME:** Balaji | **Status:** Built, synthesized, awaiting BL (M13-M18) deployment | **Last updated:** 2026-08
 
 This is the contract other modules need to integrate with the shared API Gateway. If you own M13-M18 (or any future business module needing gateway routes), read this before asking Neha anything - it is probably answered here.
 
@@ -25,7 +25,11 @@ Example: /prajna/dev/approval/start-fn-arn
 
 Publish this using SharedParameter (Module 1's construct) from your own stack - do not hand-write the SSM path string, use the same helper Module 4 reads with.
 
-Known naming mismatch, unresolved as of this writing: ApprovalParameters in lib/foundation/constants/ssm-parameters.ts currently publishes M13 ARNs under different hand-named identifiers (e.g. createRequestFunctionArn) rather than the {routeId}-fn-arn pattern above. If you are M13, either align to the {routeId}-fn-arn pattern, or tell Neha the actual identifiers you are using so lib/api/route-manifest.ts can be corrected - right now it assumes the generic pattern and will report your routes as MISSING-ARN even once you are deployed, until this is reconciled.
+**✅ NAMING MISMATCH RESOLVED (2026-08):** Module 13 (Approval) now publishes Lambda ARNs to BOTH conventions via `@prajna-platform/platform-foundation`:
+- **Foundation convention** (for cross-module discovery): `/prajna/{stage}/approval/create-request-function-arn`, etc.
+- **M4 binding convention** (for RouteManager): `/prajna/{stage}/approval/start-fn-arn`, etc.
+
+M13 uses `ApprovalParameters` helpers (e.g., `startFnArn()`, `createRequestFunctionArn()`) to publish to both paths. Module 4's `scripts/resolve-routes.ts` uses these helpers for M13 routes. No action needed from M13 — just deploy and routes will bind.
 
 ## 3. The 28-route manifest
 

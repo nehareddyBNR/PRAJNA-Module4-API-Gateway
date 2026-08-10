@@ -14,9 +14,7 @@
 
 import { Construct } from 'constructs';
 import { Stack, StackProps, Annotations } from 'aws-cdk-lib';
-import { PrajnaEnvironmentConfig } from '../foundation/config/environment';
-import { ModuleIdentifier } from '../foundation/constants/naming';
-import { SharedApi } from '../foundation/constructs/shared-api';
+import { PrajnaEnvironmentConfig, ModuleIdentifier, SharedApi } from '@prajna-platform/platform-foundation';
 import { ApiAuthorizer } from './api-authorizer';
 import { RouteManager } from './route-manager';
 import { ApiWaf } from './waf';

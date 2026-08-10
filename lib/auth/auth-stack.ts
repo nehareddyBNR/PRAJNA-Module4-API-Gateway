@@ -1,11 +1,6 @@
 import { Annotations, CfnOutput, Stack, StackProps } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
-import { PrajnaEnvironmentConfig } from '../foundation/config/environment';
-import { ModuleIdentifier } from '../foundation/constants/naming';
-import { ResourceNames } from '../foundation/constants/resource-names';
-import { PLATFORM_VERSION } from '../foundation/constants/defaults';
-import { PrajnaTags } from '../foundation/tags/tags';
-import { requireNonEmpty } from '../foundation/utils/validation';
+import { PrajnaEnvironmentConfig, ModuleIdentifier, ResourceNames, PLATFORM_VERSION, PrajnaTags, requireNonEmpty } from '@prajna-platform/platform-foundation';
 import { PrajnaCognito } from './cognito';
 import { PrajnaCognitoGroups } from './groups';
 import { PrajnaAuthOutputs } from './outputs';

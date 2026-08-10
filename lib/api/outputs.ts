@@ -11,9 +11,7 @@
 import { Construct } from 'constructs';
 import { CfnOutput } from 'aws-cdk-lib';
 import * as apigateway from 'aws-cdk-lib/aws-apigateway';
-import { SharedParameter } from '../foundation/constructs/shared-parameter';
-import { ModuleIdentifier } from '../foundation/constants/naming';
-import { PrajnaEnvironmentConfig } from '../foundation/config/environment';
+import { SharedParameter, ModuleIdentifier, PrajnaEnvironmentConfig } from '@prajna-platform/platform-foundation';
 
 export interface ApiOutputsProps {
   readonly config: PrajnaEnvironmentConfig;

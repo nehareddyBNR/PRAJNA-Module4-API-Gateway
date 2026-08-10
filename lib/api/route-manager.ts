@@ -20,7 +20,7 @@ import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as fs from 'fs';
 import * as path from 'path';
 import { RouteAuth } from './route-manifest';
-import { PrajnaEnvironmentConfig } from '../foundation/config/environment';
+import { PrajnaEnvironmentConfig } from '@prajna-platform/platform-foundation';
 
 interface ResolvedRoute {
   moduleId: string;

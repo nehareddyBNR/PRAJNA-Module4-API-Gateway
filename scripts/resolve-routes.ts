@@ -3,8 +3,15 @@
  * @fileoverview Preflight resolver for Module 4 route ARNs.
  *
  * Run this BEFORE `cdk deploy`. It reads lib/api/route-manifest.ts, checks
- * SSM Parameter Store for each route's Lambda ARN at
+ * SSM Parameter Store for each route's Lambda ARN.
+ *
+ * For Module 13 (Approval), it uses the Foundation's ApprovalParameters
+ * which defines both the Foundation convention (create-request-function-arn)
+ * and M4 binding convention (start-fn-arn). M13 publishes to BOTH.
+ *
+ * For other modules, it uses the generic convention:
  *   /prajna/{stage}/{moduleId}/{routeId}-fn-arn
+ *
  * and writes two files:
  *
  *   build/resolved-routes.<stage>.json   — consumed by RouteManager at synth
@@ -20,6 +27,8 @@ import { SSMClient, GetParameterCommand } from '@aws-sdk/client-ssm';
 import * as fs from 'fs';
 import * as path from 'path';
 import { ROUTE_MANIFEST, RouteDefinition, RouteAuth } from '../lib/api/route-manifest';
+import { M13M4BindingPaths } from '../lib/api/m13-ssm-paths';
+import { Stage } from '@prajna-platform/platform-foundation';
 
 type RouteStatus = 'BOUND' | 'MISSING-ARN' | 'HOLD' | 'AUTH-TODO';
 
@@ -27,6 +36,28 @@ interface ResolvedRoute extends RouteDefinition {
   status: RouteStatus;
   arn?: string;
   ssmPath: string;
+}
+
+// M13 routeId -> Foundation M4 convention method mapping
+const M13_M4_PATH_MAP: Record<string, (stage: Stage) => string> = {
+  'start': M13M4BindingPaths.startFnArn,
+  'submit-action': M13M4BindingPaths.submitActionFnArn,
+  'resubmit': M13M4BindingPaths.resubmitFnArn,
+  'get-status': M13M4BindingPaths.getStatusFnArn,
+  'get-pending': M13M4BindingPaths.getPendingFnArn,
+  'pending-mine-count': M13M4BindingPaths.pendingMineCountFnArn,
+  'health': M13M4BindingPaths.healthFnArn,
+};
+
+function getSsmPath(route: RouteDefinition, stage: string): string {
+  const stageEnum = stage.toUpperCase() as Stage;
+  
+  if (route.moduleId === 'approval' && M13_M4_PATH_MAP[route.routeId]) {
+    return M13_M4_PATH_MAP[route.routeId](stageEnum);
+  }
+  
+  // Generic convention for other modules
+  return `/prajna/${stage}/${route.moduleId}/${route.routeId}-fn-arn`;
 }
 
 async function main() {
@@ -41,7 +72,7 @@ async function main() {
   const resolved: ResolvedRoute[] = [];
 
   for (const route of ROUTE_MANIFEST) {
-    const ssmPath = `/prajna/${stage}/${route.moduleId}/${route.routeId}-fn-arn`;
+    const ssmPath = getSsmPath(route, stage);
 
     if (route.hold) {
       resolved.push({ ...route, status: 'HOLD', ssmPath });

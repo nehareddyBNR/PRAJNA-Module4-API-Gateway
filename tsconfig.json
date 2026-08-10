@@ -23,17 +23,13 @@
     "forceConsistentCasingInFileNames": true,
     "outDir": "dist",
     "rootDir": ".",
-    "baseUrl": ".",
-    "paths": {
-      "@foundation/*": ["lib/foundation/*"],
-      "@auth/*": ["lib/auth/*"],
-      "@storage/*": ["lib/storage/*"]
-    }
+    "baseUrl": "."
   },
   "include": [
     "bin/**/*.ts",
     "lib/**/*.ts",
-    "test/**/*.ts"
+    "test/**/*.ts",
+    "scripts/**/*.ts"
   ],
   "exclude": [
     "node_modules",

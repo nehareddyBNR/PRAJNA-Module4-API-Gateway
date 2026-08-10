@@ -6,9 +6,7 @@
 import { Construct } from 'constructs';
 import * as wafv2 from 'aws-cdk-lib/aws-wafv2';
 import * as apigateway from 'aws-cdk-lib/aws-apigateway';
-import { ResourceNames } from '../foundation/constants/resource-names';
-import { ModuleIdentifier } from '../foundation/constants/naming';
-import { PrajnaEnvironmentConfig } from '../foundation/config/environment';
+import { ResourceNames, ModuleIdentifier, PrajnaEnvironmentConfig } from '@prajna-platform/platform-foundation';
 
 export interface ApiWafProps {
   readonly config: PrajnaEnvironmentConfig;

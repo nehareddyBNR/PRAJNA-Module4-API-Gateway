@@ -17,13 +17,7 @@ import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as path from 'path';
 
-import { PrajnaEnvironmentConfig } from '../foundation/config/environment';
-import { ModuleIdentifier } from '../foundation/constants/naming';
-import { PrajnaTags } from '../foundation/tags/tags';
-import { requireNonEmpty } from '../foundation/utils/validation';
-import { SharedLambda } from '../foundation/constructs/shared-lambda';
-import { SharedBucket } from '../foundation/constructs/shared-bucket';
-import { SharedParameter } from '../foundation/constructs/shared-parameter';
+import { PrajnaEnvironmentConfig, ModuleIdentifier, PrajnaTags, requireNonEmpty, SharedLambda, SharedBucket, SharedParameter } from '@prajna-platform/platform-foundation';
 
 export interface PrajnaStorageApiProps {
   /** The full environment configuration object. */

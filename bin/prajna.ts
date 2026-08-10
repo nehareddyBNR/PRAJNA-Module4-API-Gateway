@@ -16,11 +16,7 @@
 
 import 'source-map-support/register';
 import * as cdk from 'aws-cdk-lib';
-import { EnvironmentLoader } from '../lib/foundation/utils';
-import { PrajnaTags } from '../lib/foundation/tags';
-import { FoundationStack } from '../lib/foundation/foundation-stack';
-import { ResourceNames } from '../lib/foundation/constants';
-import { ModuleIdentifier } from '../lib/foundation/constants';
+import { EnvironmentLoader, PrajnaTags, FoundationStack, ModuleIdentifier, ResourceNames } from '@prajna-platform/platform-foundation';
 import { AuthStack } from '../lib/auth/auth-stack';
 import { StorageStack } from '../lib/storage/storage-stack';
 import { ApiGatewayStack } from '../lib/api/api-gateway-stack';

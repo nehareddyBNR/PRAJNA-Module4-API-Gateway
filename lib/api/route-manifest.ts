@@ -8,17 +8,16 @@
  * SSM ARN path convention (per Bhanu's manifest, B-002):
  *   /prajna/{stage}/{moduleId}/{routeId}-fn-arn
  *
- * NOTE: This convention does NOT match how `ApprovalParameters` in
- * `lib/foundation/constants/ssm-parameters.ts` currently publishes M13 ARNs
- * (it uses named getters like `createRequestFunctionArn`, not a generic
- * `{routeId}-fn-arn` pattern). Flagged in the handoff report — reconcile
- * with Bhanu before binding M13 routes for real, or `valueForStringParameter`
- * will read a parameter that was never written.
+ * NOTE: For Module 13 (Approval), the naming convention has been RECONCILED.
+ * M13 now publishes Lambda ARNs to BOTH the Foundation convention
+ * (e.g., create-request-function-arn) AND the M4 convention (e.g., start-fn-arn)
+ * via ApprovalParameters helpers in @prajna-platform/platform-foundation.
+ * The resolve-routes.ts script uses these helpers for M13 routes.
  *
  * @module lib/api/route-manifest
  */
 
-import { ModuleIdentifier } from '../foundation/constants/naming';
+import { ModuleIdentifier } from '@prajna-platform/platform-foundation';
 
 /** Auth mode required for a route. */
 export enum RouteAuth {

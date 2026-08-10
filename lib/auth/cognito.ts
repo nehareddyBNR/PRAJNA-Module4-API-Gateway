@@ -1,10 +1,7 @@
 import { Duration, RemovalPolicy } from 'aws-cdk-lib';
 import * as cognito from 'aws-cdk-lib/aws-cognito';
 import { Construct } from 'constructs';
-import { PrajnaEnvironmentConfig } from '../foundation/config/environment';
-import { ResourceNames } from '../foundation/constants/resource-names';
-import { ModuleIdentifier } from '../foundation/constants/naming';
-import { PrajnaTags } from '../foundation/tags/tags';
+import { PrajnaEnvironmentConfig, ModuleIdentifier, ResourceNames, PrajnaTags } from '@prajna-platform/platform-foundation';
 
 export interface PrajnaCognitoProps {
   /** The full environment configuration object. */

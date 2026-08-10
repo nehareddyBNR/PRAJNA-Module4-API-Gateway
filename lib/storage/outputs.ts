@@ -15,12 +15,7 @@
  */
 
 import { Construct } from 'constructs';
-import { SharedParameter } from '../foundation/constructs/shared-parameter';
-import { SharedBucket } from '../foundation/constructs/shared-bucket';
-import { PrajnaEnvironmentConfig } from '../foundation/config/environment';
-import { ModuleIdentifier } from '../foundation/constants/naming';
-import { PrajnaTags } from '../foundation/tags/tags';
-import { requireNonEmpty } from '../foundation/utils/validation';
+import { SharedParameter, SharedBucket, ModuleIdentifier, PrajnaTags, requireNonEmpty, PrajnaEnvironmentConfig } from '@prajna-platform/platform-foundation';
 
 export interface PrajnaStorageOutputsProps {
   /** The full environment configuration object. */

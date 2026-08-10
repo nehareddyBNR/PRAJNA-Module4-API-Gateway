@@ -1,9 +1,6 @@
 import * as cognito from 'aws-cdk-lib/aws-cognito';
 import { Construct } from 'constructs';
-import { PrajnaEnvironmentConfig } from '../foundation/config/environment';
-import { ModuleIdentifier } from '../foundation/constants/naming';
-import { PrajnaTags } from '../foundation/tags/tags';
-import { requireNonEmpty } from '../foundation/utils/validation';
+import { PrajnaEnvironmentConfig, ModuleIdentifier, PrajnaTags, requireNonEmpty } from '@prajna-platform/platform-foundation';
 
 export interface PrajnaCognitoGroupsProps {
   /** The full environment configuration object. */

@@ -20,11 +20,7 @@
 
 import { Annotations, CfnOutput, Stack, StackProps } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
-import { PrajnaEnvironmentConfig } from '../foundation/config/environment';
-import { ModuleIdentifier } from '../foundation/constants/naming';
-import { PLATFORM_VERSION } from '../foundation/constants/defaults';
-import { PrajnaTags } from '../foundation/tags/tags';
-import { requireNonEmpty } from '../foundation/utils/validation';
+import { PrajnaEnvironmentConfig, ModuleIdentifier, PLATFORM_VERSION, PrajnaTags, requireNonEmpty } from '@prajna-platform/platform-foundation';
 import { PrajnaStorageBuckets } from './buckets';
 import { PrajnaStorageOutputs } from './outputs';
 import { PrajnaStorageApi } from './api';

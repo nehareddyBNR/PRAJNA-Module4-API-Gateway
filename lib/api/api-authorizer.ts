@@ -15,9 +15,7 @@ import { Duration } from 'aws-cdk-lib';
 import * as apigateway from 'aws-cdk-lib/aws-apigateway';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as iam from 'aws-cdk-lib/aws-iam';
-import { SharedParameter } from '../foundation/constructs/shared-parameter';
-import { AuthParameters } from '../foundation/constants/ssm-parameters';
-import { PrajnaEnvironmentConfig } from '../foundation/config/environment';
+import { SharedParameter, AuthParameters, PrajnaEnvironmentConfig } from '@prajna-platform/platform-foundation';
 
 export interface ApiAuthorizerProps {
   readonly config: PrajnaEnvironmentConfig;
