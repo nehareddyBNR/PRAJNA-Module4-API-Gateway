@@ -63,7 +63,14 @@ describe('Cognito Lambda Authorizer', () => {
 
     expect(result.principalId).toBe('faculty-123');
     expect(result.policyDocument.Statement[0].Effect).toBe('Allow');
-    
+
+    // B-066: the policy is cached for 5 minutes keyed on the token, so it must
+    // cover the whole stage — not just the route that happened to trigger it.
+    expect(result.policyDocument.Statement[0].Resource).toBe(
+      'arn:aws:execute-api:ap-south-1:123456789012:apiId/stage/*/*',
+    );
+
+
     // Check injected context fields
     const context = result.context!;
     expect(context.userId).toBe('faculty-123');
@@ -131,6 +138,54 @@ describe('Cognito Lambda Authorizer', () => {
     const context = result.context!;
     // DIRECTOR (rank 2) is highest among ['FACULTY' (0), 'HOD' (1), 'DIRECTOR' (2)]
     expect(context.role).toBe('DIRECTOR');
+  });
+
+  test('the same token authorizes a second, different route (B-066 regression)', async () => {
+    mockVerify.mockResolvedValue({
+      'custom:role': 'FACULTY',
+      'custom:campus': 'BENGALURU',
+      'custom:department': 'CSE',
+      'custom:facultyId': 'faculty-123',
+      sub: 'sub-123',
+    });
+
+    // Two distinct routes, one token. Before the fix the first call's policy
+    // was cached and the second route 403'd for the length of the cache TTL.
+    const scoreEvent = createEvent('Bearer token123');
+    (scoreEvent as any).methodArn =
+      'arn:aws:execute-api:ap-south-1:123456789012:apiId/dev/GET/score/FAC-BLR-001234';
+    const leaderboardEvent = createEvent('Bearer token123');
+    (leaderboardEvent as any).methodArn =
+      'arn:aws:execute-api:ap-south-1:123456789012:apiId/dev/GET/leaderboard';
+
+    const first = await handler(scoreEvent);
+    const second = await handler(leaderboardEvent);
+
+    const expected = 'arn:aws:execute-api:ap-south-1:123456789012:apiId/dev/*/*';
+    expect(first.policyDocument.Statement[0].Resource).toBe(expected);
+    expect(second.policyDocument.Statement[0].Resource).toBe(expected);
+    // Order-independence is the actual property under test: whichever policy
+    // API Gateway cached, it covers the other route too.
+    expect(first.policyDocument.Statement[0].Resource)
+      .toBe(second.policyDocument.Statement[0].Resource);
+  });
+
+  test('the stage prefix is preserved, so a dev token cannot reach prod', async () => {
+    mockVerify.mockResolvedValue({
+      'custom:role': 'FACULTY',
+      'custom:campus': 'BENGALURU',
+      'custom:department': 'CSE',
+      'custom:facultyId': 'faculty-123',
+      sub: 'sub-123',
+    });
+
+    const event = createEvent('Bearer token123');
+    (event as any).methodArn =
+      'arn:aws:execute-api:ap-south-1:123456789012:apiId/dev/GET/score/FAC-BLR-001234';
+
+    const result = await handler(event);
+    expect(result.policyDocument.Statement[0].Resource).toContain('/dev/');
+    expect(result.policyDocument.Statement[0].Resource).not.toContain('/prod/');
   });
 
   test('throws error if verifier fails', async () => {
