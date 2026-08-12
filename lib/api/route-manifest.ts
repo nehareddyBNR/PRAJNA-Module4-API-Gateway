@@ -42,9 +42,10 @@ export interface RouteDefinition {
   /** Auth mode for this route. */
   readonly auth: RouteAuth;
   /**
-   * Set true to skip binding even if present in this file — used for the
-   * M16 / M18 holds until Bhanu confirms the BL-side unblocks are done.
-   * RouteManager reports these as AUTH-TODO/HOLD rather than binding them.
+   * Set to a reason string to skip binding even though the row is present
+   * here — the mechanism used for the (now lifted) M16 / M18 holds while BL
+   * still self-registered those routes. RouteManager reports held rows as
+   * HOLD rather than binding them. No route is held as of 2026-08-12.
    */
   readonly hold?: string;
 }
@@ -64,10 +65,19 @@ const APPROVAL_ROUTES: RouteDefinition[] = [
 ];
 
 // ─────────────────────────────────────────────────────────────────────────
-// M14 — Score (1 route)
+// M14 — Score (5 routes / 3 Lambdas)
+//
+// `scoring-config` is ONE handler serving three methods — it branches on
+// method and on the `/preview` suffix (BL: scoringConfig.handler.ts:155),
+// so all three rows resolve the same `score/scoring-config-fn-arn`.
+// ADMIN/IQAC-only enforcement lives in the handler, not in the gateway.
 // ─────────────────────────────────────────────────────────────────────────
 const SCORE_ROUTES: RouteDefinition[] = [
   { moduleId: ModuleIdentifier.SCORE, routeId: 'get-score', method: 'GET', path: '/score/{facultyId}', auth: RouteAuth.JWT },
+  { moduleId: ModuleIdentifier.SCORE, routeId: 'get-contributions', method: 'GET', path: '/score/{facultyId}/contributions', auth: RouteAuth.JWT },
+  { moduleId: ModuleIdentifier.SCORE, routeId: 'scoring-config', method: 'GET', path: '/scoring-config', auth: RouteAuth.JWT },
+  { moduleId: ModuleIdentifier.SCORE, routeId: 'scoring-config', method: 'PUT', path: '/scoring-config', auth: RouteAuth.JWT },
+  { moduleId: ModuleIdentifier.SCORE, routeId: 'scoring-config', method: 'POST', path: '/scoring-config/preview', auth: RouteAuth.JWT },
 ];
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -79,17 +89,23 @@ const LEADERBOARD_ROUTES: RouteDefinition[] = [
 ];
 
 // ─────────────────────────────────────────────────────────────────────────
-// M16 — Notification (6 routes / 4 Lambdas) — ON HOLD until Bhanu confirms
-// the self-registration block is cut. Do NOT remove `hold` until confirmed.
+// M16 — Notification (6 routes / 4 Lambdas)
+//
+// HOLD LIFTED 2026-08-12 (B-044 §1). BL deleted the self-registration block
+// in notification-engine-stack.ts on 2026-07-31; lib/__tests__/stage-guards.test.ts
+// asserts zero API Gateway resources in every BL stack, in every stage, so the
+// duplicate-registration risk that forced the hold cannot come back silently.
+// `get-notifications` and `mark-read` each serve two paths — one Lambda apiece,
+// branching on the resolved path (BL: getNotifications.handler.ts:34, markRead
+// falls through to mark-all when no notificationId is present).
 // ─────────────────────────────────────────────────────────────────────────
-const NOTIFICATION_HOLD = 'B-002: blocked on Bhanu confirming M16 self-registration block deletion';
 const NOTIFICATION_ROUTES: RouteDefinition[] = [
-  { moduleId: ModuleIdentifier.NOTIFICATION, routeId: 'get-notifications', method: 'GET', path: '/notifications', auth: RouteAuth.JWT, hold: NOTIFICATION_HOLD },
-  { moduleId: ModuleIdentifier.NOTIFICATION, routeId: 'get-notifications', method: 'GET', path: '/notifications/count', auth: RouteAuth.JWT, hold: NOTIFICATION_HOLD },
-  { moduleId: ModuleIdentifier.NOTIFICATION, routeId: 'mark-read', method: 'PATCH', path: '/notifications/{notificationId}/read', auth: RouteAuth.JWT, hold: NOTIFICATION_HOLD },
-  { moduleId: ModuleIdentifier.NOTIFICATION, routeId: 'mark-read', method: 'PATCH', path: '/notifications/read-all', auth: RouteAuth.JWT, hold: NOTIFICATION_HOLD },
-  { moduleId: ModuleIdentifier.NOTIFICATION, routeId: 'get-preferences', method: 'GET', path: '/notifications/preferences', auth: RouteAuth.JWT, hold: NOTIFICATION_HOLD },
-  { moduleId: ModuleIdentifier.NOTIFICATION, routeId: 'update-preferences', method: 'PUT', path: '/notifications/preferences', auth: RouteAuth.JWT, hold: NOTIFICATION_HOLD },
+  { moduleId: ModuleIdentifier.NOTIFICATION, routeId: 'get-notifications', method: 'GET', path: '/notifications', auth: RouteAuth.JWT },
+  { moduleId: ModuleIdentifier.NOTIFICATION, routeId: 'get-notifications', method: 'GET', path: '/notifications/count', auth: RouteAuth.JWT },
+  { moduleId: ModuleIdentifier.NOTIFICATION, routeId: 'mark-read', method: 'PATCH', path: '/notifications/{notificationId}/read', auth: RouteAuth.JWT },
+  { moduleId: ModuleIdentifier.NOTIFICATION, routeId: 'mark-read', method: 'PATCH', path: '/notifications/read-all', auth: RouteAuth.JWT },
+  { moduleId: ModuleIdentifier.NOTIFICATION, routeId: 'get-preferences', method: 'GET', path: '/notifications/preferences', auth: RouteAuth.JWT },
+  { moduleId: ModuleIdentifier.NOTIFICATION, routeId: 'update-preferences', method: 'PUT', path: '/notifications/preferences', auth: RouteAuth.JWT },
 ];
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -103,21 +119,27 @@ const REPORTS_ROUTES: RouteDefinition[] = [
 ];
 
 // ─────────────────────────────────────────────────────────────────────────
-// M18 — APAR (8 routes) — ON HOLD until Bhanu confirms temp RestApi deleted
+// M18 — APAR (6 routes)
+//
+// HOLD LIFTED 2026-08-12 (B-044 §2). BL deleted M18's own public, unauthenticated
+// RestApi on 2026-07-31 — that construct was B-003 and the reason for the hold.
+//
+// B-103 / B-059: `hod-review` and `director-review` are GONE. M13 owns the APAR
+// review chain now — submitAppraisal starts a STANDARD workflow via
+// POST /approval/start, and HoD/Director act through POST /approval/{requestId}/action.
+// BL deleted those two handlers, so those ARNs no longer exist; binding them
+// would have produced 500s at cutover. Do NOT re-add them.
 // ─────────────────────────────────────────────────────────────────────────
-const APAR_HOLD = 'B-002: blocked on Bhanu confirming M18 temp unauthenticated RestApi deletion';
 const APAR_ROUTES: RouteDefinition[] = [
-  { moduleId: ModuleIdentifier.APAR, routeId: 'open-cycle', method: 'POST', path: '/apar/cycles', auth: RouteAuth.JWT, hold: APAR_HOLD },
-  { moduleId: ModuleIdentifier.APAR, routeId: 'create-draft', method: 'POST', path: '/apar/drafts', auth: RouteAuth.JWT, hold: APAR_HOLD },
-  { moduleId: ModuleIdentifier.APAR, routeId: 'ai-assist', method: 'POST', path: '/apar/ai-assist', auth: RouteAuth.JWT, hold: APAR_HOLD },
-  { moduleId: ModuleIdentifier.APAR, routeId: 'submit', method: 'POST', path: '/apar/{aparId}/submit', auth: RouteAuth.JWT, hold: APAR_HOLD },
-  { moduleId: ModuleIdentifier.APAR, routeId: 'self-assessment', method: 'PUT', path: '/apar/{aparId}/self-assessment', auth: RouteAuth.JWT, hold: APAR_HOLD },
-  { moduleId: ModuleIdentifier.APAR, routeId: 'hod-review', method: 'POST', path: '/apar/{aparId}/review/hod', auth: RouteAuth.JWT, hold: APAR_HOLD },
-  { moduleId: ModuleIdentifier.APAR, routeId: 'director-review', method: 'POST', path: '/apar/{aparId}/review/director', auth: RouteAuth.JWT, hold: APAR_HOLD },
-  { moduleId: ModuleIdentifier.APAR, routeId: 'calculate-score', method: 'GET', path: '/apar/score/{facultyId}/{year}', auth: RouteAuth.JWT, hold: APAR_HOLD },
+  { moduleId: ModuleIdentifier.APAR, routeId: 'open-cycle', method: 'POST', path: '/apar/cycles', auth: RouteAuth.JWT },
+  { moduleId: ModuleIdentifier.APAR, routeId: 'create-draft', method: 'POST', path: '/apar/drafts', auth: RouteAuth.JWT },
+  { moduleId: ModuleIdentifier.APAR, routeId: 'ai-assist', method: 'POST', path: '/apar/ai-assist', auth: RouteAuth.JWT },
+  { moduleId: ModuleIdentifier.APAR, routeId: 'submit', method: 'POST', path: '/apar/{aparId}/submit', auth: RouteAuth.JWT },
+  { moduleId: ModuleIdentifier.APAR, routeId: 'self-assessment', method: 'PUT', path: '/apar/{aparId}/self-assessment', auth: RouteAuth.JWT },
+  { moduleId: ModuleIdentifier.APAR, routeId: 'calculate-score', method: 'GET', path: '/apar/score/{facultyId}/{year}', auth: RouteAuth.JWT },
 ];
 
-/** All 28 routes across M13–M18. */
+/** All 30 routes across M13–M18, resolving to BL's 26 published handler ARNs. */
 export const ROUTE_MANIFEST: RouteDefinition[] = [
   ...APPROVAL_ROUTES,
   ...SCORE_ROUTES,

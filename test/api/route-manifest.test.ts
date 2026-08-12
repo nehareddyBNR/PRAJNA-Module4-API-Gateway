@@ -1,17 +1,17 @@
 import { ROUTE_MANIFEST, bindableRoutes, heldRoutes } from '../../lib/api/route-manifest';
 
 describe('Module 4 route manifest', () => {
-  it('contains exactly 28 routes', () => {
-    expect(ROUTE_MANIFEST.length).toBe(28);
+  it('contains exactly 30 routes', () => {
+    expect(ROUTE_MANIFEST.length).toBe(30);
   });
 
-  it('holds exactly the 6 M16 + 8 M18 routes', () => {
-    expect(heldRoutes().length).toBe(14);
+  it('holds nothing — the M16 and M18 holds lifted once BL deleted its own gateways', () => {
+    expect(heldRoutes()).toEqual([]);
   });
 
-  it('bindable routes exclude all held routes', () => {
+  it('binds every route in the manifest', () => {
     const bindable = bindableRoutes();
-    expect(bindable.length).toBe(28 - 14);
+    expect(bindable.length).toBe(30);
     expect(bindable.every((r) => !r.hold)).toBe(true);
   });
 
@@ -26,5 +26,35 @@ describe('Module 4 route manifest', () => {
     const publicRoutes = ROUTE_MANIFEST.filter((r) => r.auth === 'NONE' as any);
     expect(publicRoutes.length).toBe(1);
     expect(publicRoutes[0].path).toBe('/approval/health');
+  });
+
+  it('no two rows share a method + path (would collide on the gateway)', () => {
+    const keys = ROUTE_MANIFEST.map((r) => `${r.method} ${r.path}`);
+    expect(new Set(keys).size).toBe(keys.length);
+  });
+
+  it('resolves to the 26 handler ARNs BL publishes', () => {
+    const arns = new Set(ROUTE_MANIFEST.map((r) => `${r.moduleId}/${r.routeId}`));
+    expect(arns.size).toBe(26);
+  });
+
+  // B-103 / B-059: M13 owns the APAR review chain; BL deleted these handlers,
+  // so binding them would point the gateway at ARNs that do not exist.
+  it('does not bind the deleted APAR review routes', () => {
+    const reviewRoutes = ROUTE_MANIFEST.filter(
+      (r) => r.routeId === 'hod-review' || r.routeId === 'director-review',
+    );
+    expect(reviewRoutes).toEqual([]);
+  });
+
+  it('exposes M14 scoring-config on all three methods and the ledger read', () => {
+    const scoreRoutes = ROUTE_MANIFEST.filter((r) => r.moduleId === 'score');
+    expect(scoreRoutes.map((r) => `${r.method} ${r.path}`).sort()).toEqual([
+      'GET /score/{facultyId}',
+      'GET /score/{facultyId}/contributions',
+      'GET /scoring-config',
+      'POST /scoring-config/preview',
+      'PUT /scoring-config',
+    ]);
   });
 });
