@@ -31,11 +31,15 @@ Publish this using SharedParameter (Module 1's construct) from your own stack - 
 
 M13 uses `ApprovalParameters` helpers (e.g., `startFnArn()`, `createRequestFunctionArn()`) to publish to both paths. Module 4's `scripts/resolve-routes.ts` uses these helpers for M13 routes. No action needed from M13 — just deploy and routes will bind.
 
-## 3. The 28-route manifest
+## 3. The 30-route manifest
 
 The full list (module, route, method, path, auth) lives in lib/api/route-manifest.ts - that file is the single source of truth, not this doc. If your route is not listed there, it will never bind regardless of what you publish to SSM. Ask Neha to add it.
 
-M16 (6 routes) and M18 (8 routes) are currently on HOLD in the manifest - they will not bind even with a valid ARN in SSM - pending Bhanu's confirmation that the M16 self-registration block and M18's temporary unauthenticated RestApi have been removed. Once confirmed, remove the hold field for those routes in the manifest.
+**30 routes over 26 handler ARNs** - four ARNs serve more than one route: M14's `scoring-config` (GET + PUT /scoring-config, POST /scoring-config/preview), M16's `get-notifications` (/notifications + /notifications/count) and `mark-read` (/{notificationId}/read + /read-all). Those handlers branch internally on method and path.
+
+**No route is held any more (2026-08-12).** M16's 6 routes and M18's 6 routes came off hold once BL deleted the M16 self-registration block and M18's temporary unauthenticated RestApi (B-044; BL's stage-guards.test.ts now asserts zero API Gateway resources in every BL stack, in every stage).
+
+**M18 is 6 routes, not 8.** `hod-review` and `director-review` were deleted (B-059 / B-103) - M13 owns the APAR review chain now: submitAppraisal starts a STANDARD workflow via POST /approval/start, and HoD/Director act through POST /approval/{requestId}/action. Those two ARNs no longer exist; do not ask for them back.
 
 ## 4. Auth contract
 
@@ -53,13 +57,29 @@ npm run resolve-routes -- --stage dev
 
 Produces build/M4-ROUTE-REPORT.<stage>.md - one row per route, status one of BOUND / MISSING-ARN / HOLD / AUTH-TODO.
 
+## 5a. After YOU deploy: ask for a stage publish (INFRA-2)
+
+API Gateway REST points a stage at a specific deployment snapshot. Adding resources to the gateway from your own stack does **not** publish them - your routes exist on the API and still return 404 on the stage until someone calls CreateDeployment, and a module that does not own the gateway cannot trigger one. BL hit exactly this on 2026-08-07 and fixed it by hand.
+
+**Module 4 owns stage redeployment.** After any deploy that touches gateway routes, run (or ask Neha to run):
+
+npm run redeploy -- --stage dev
+
+It reads the API id from /prajna/{stage}/api/api-id and publishes the current resources to the stage. Do not create your own apigateway.Deployment - two owners of the same stage is worse than the 404.
+
 ## 6. CORS
 
 Centralized at the API Gateway level (SharedApi). Allowed headers: Authorization, Content-Type. Allowed methods: GET, POST, PUT, PATCH, DELETE, OPTIONS. Do not add CORS headers in your own Lambda - if you do, you will get duplicate-header errors in the browser, not better CORS.
 
+Origins are a **deploy parameter**, not a code change: `cdk deploy -c corsOrigins=https://a,https://b`. Without it, prod defaults to `https://prajna.gitam.edu` (the confirmed dashboard origin, B-052 - the `dashboard.` subdomain this used to carry was never real) and non-prod to http://localhost:3000. Dev is permissive, so a wrong prod origin is invisible until cutover - send Neha the confirmed list rather than assuming.
+
 ## 7. Discovery - the gateway's own URL
 
 Published to SSM at /prajna/{stage}/api/api-endpoint the moment Module 4 deploys - does not wait for any routes to be bound. This is the B-038 switch: once this resolves, Bhanu cuts M16's self-registration block over to gateway discovery.
+
+⚠️ **api-endpoint ends with a trailing slash.** It is CDK's `RestApi.url`, which always does. The natural `` `${apiBase}/score/${id}` `` produces `.../dev//score/...`, and API Gateway answers **403 Missing Authentication Token** for that unbound double-slash path - which reads as an auth failure and sends people off debugging their JWT. Three teams have lost time to this (M7, M18, M24). Strip it:
+
+const base = apiEndpoint.replace(/\/$/, '');
 
 ## 8. Escalation
 
