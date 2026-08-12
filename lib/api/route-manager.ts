@@ -89,9 +89,19 @@ export class RouteManager extends Construct {
         continue;
       }
 
+      // Construct ids must be unique per (path, method), NOT per (routeId, method):
+      // several routes deliberately share one Lambda -- M16's `get-notifications`
+      // serves /notifications and /notifications/count, `mark-read` serves
+      // /{notificationId}/read and /read-all, and M14's `scoring-config` serves
+      // three methods across two paths. Keying on routeId alone throws
+      // "There is already a Construct with name ..." the moment two rows share
+      // a routeId + method, which is exactly what lifting the M16 hold does.
+      const routeKey = `${route.moduleId}-${route.routeId}-${route.method}` +
+        `-${route.path.replace(/[^A-Za-z0-9]/g, '')}`;
+
       const fn = lambda.Function.fromFunctionAttributes(
         this,
-        `Fn-${route.moduleId}-${route.routeId}-${route.method}`,
+        `Fn-${routeKey}`,
         { functionArn: route.arn!, sameEnvironment: true },
       );
 
@@ -110,7 +120,7 @@ export class RouteManager extends Construct {
         new apigateway.LambdaIntegration(fn, { proxy: true, allowTestInvoke: false }),
         { authorizer, authorizationType },
       );
-new lambda.CfnPermission(this, `Perm-${route.moduleId}-${route.routeId}-${route.method}`, {
+      new lambda.CfnPermission(this, `Perm-${routeKey}`, {
         action: 'lambda:InvokeFunction',
         functionName: route.arn!,
         principal: 'apigateway.amazonaws.com',
