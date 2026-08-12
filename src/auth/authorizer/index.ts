@@ -66,6 +66,31 @@ function generatePolicy(
 }
 
 /**
+ * Widen a methodArn to cover every method and path on the same API stage.
+ *
+ * B-066: the policy we return is cached by API Gateway for `resultsCacheTtl`
+ * (5 minutes) keyed on the IDENTITY SOURCE — the Authorization header — not on
+ * the method. Returning `event.methodArn` therefore hands every subsequent
+ * request made with that same token a policy scoped to whichever route the
+ * caller happened to hit FIRST, and everything else 403s for the rest of the
+ * window. Proven live: same token, order reversed, the second route always
+ * failed (Bhanu, ap-south-2, 2026-07-31).
+ *
+ *   arn:aws:execute-api:region:acct:apiId/stage/GET/score/{facultyId}
+ *     -> arn:aws:execute-api:region:acct:apiId/stage/*\/*
+ *
+ * This is what AWS documents for a shared authorizer, and it keeps the cache
+ * (one authorizer invocation per token per 5 min instead of one per request).
+ * The stage prefix is preserved, so a dev token still cannot reach prod.
+ */
+export function stageWideResource(methodArn: string): string {
+  const parts = methodArn.split('/');
+  // parts[0] = arn:...:apiId, parts[1] = stage, parts[2] = METHOD, parts[3..] = path
+  if (parts.length < 3) return methodArn; // unexpected shape — fail closed to the narrow ARN
+  return `${parts[0]}/${parts[1]}/*/*`;
+}
+
+/**
  * Lambda Authorizer Handler for PRAJNA API Gateway.
  */
 export const handler = async (event: APIGatewayRequestAuthorizerEvent): Promise<APIGatewayAuthorizerResult> => {
@@ -188,11 +213,14 @@ export const handler = async (event: APIGatewayRequestAuthorizerEvent): Promise<
       facultyId: String(facultyId),
     };
 
-    // 6 & 7. Return IAM Allow Policy with injected context
-    // We allow access to the requested methodArn if the token is successfully parsed.
+    // 6 & 7. Return IAM Allow Policy with injected context.
+    // Scope is the whole API stage, not the triggering method — see
+    // stageWideResource() above (B-066). Per-route authorization is the
+    // handlers' job (campus isolation, role checks); the authorizer's job is
+    // "is this a valid token for this stage".
     console.log(`Successfully authorized user: ${facultyId} (${role})`);
-    
-    return generatePolicy(facultyId, 'Allow', event.methodArn, authorizerContext);
+
+    return generatePolicy(facultyId, 'Allow', stageWideResource(event.methodArn), authorizerContext);
 
   } catch (error) {
     // If we throw exactly "Unauthorized", API Gateway returns a 401.
