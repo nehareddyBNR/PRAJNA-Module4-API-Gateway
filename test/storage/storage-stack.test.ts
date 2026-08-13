@@ -119,6 +119,27 @@ describe('StorageStack', () => {
     });
   });
 
+  // Regression: both Lambdas previously shipped an inline `501 Not deployed`
+  // stub (lambda.Code.fromInline) that silently shadowed the real handler in
+  // src/storage/{upload,download}-url/index.ts -- every presigned-URL request
+  // failed in every stage. fromAsset() produces an S3Bucket/S3Key code
+  // reference; fromInline() produces a ZipFile. Asserting the former is
+  // present (and the latter isn't) catches a regression back to the stub.
+  test('Upload/Download Lambdas deploy real code, not an inline stub', () => {
+    const functions = template.findResources('AWS::Lambda::Function');
+    const targets = Object.values(functions).filter((fn: any) =>
+      ['prajna-dev-storage-fn-upload-url', 'prajna-dev-storage-fn-download-url'].includes(
+        fn.Properties.FunctionName,
+      ),
+    );
+    expect(targets).toHaveLength(2);
+    for (const fn of targets as any[]) {
+      expect(fn.Properties.Code.ZipFile).toBeUndefined();
+      expect(fn.Properties.Code.S3Bucket).toBeDefined();
+      expect(fn.Properties.Code.S3Key).toBeDefined();
+    }
+  });
+
   // ── IAM Permissions ───────────────────────────────────────────────────
 
   test('Upload Lambda has s3:PutObject permission', () => {
