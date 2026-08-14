@@ -42,7 +42,9 @@ export const prodConfig: PrajnaEnvironmentConfig = {
   // ── AWS Target ───────────────────────────────────────────────────────────
   deploymentTarget: {
     account: process.env.CDK_DEFAULT_ACCOUNT ?? '345678901234',
-    region: 'ap-south-1',
+    // See dev.ts / B-002 follow-up: the shared account runs everything in
+    // ap-south-2, not the ap-south-1 literal this used to be. Same fix.
+    region: process.env.CDK_DEFAULT_REGION ?? 'ap-south-1',
   },
 
   // ── Lambda Defaults ──────────────────────────────────────────────────────

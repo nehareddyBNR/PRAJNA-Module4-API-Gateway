@@ -36,7 +36,16 @@ export const devConfig: PrajnaEnvironmentConfig = {
   // ── AWS Target ───────────────────────────────────────────────────────────
   deploymentTarget: {
     account: process.env.CDK_DEFAULT_ACCOUNT ?? '123456789012',
-    region: 'ap-south-1',
+    // Read from the CDK environment rather than pinning a literal. SSM
+    // parameters, EventBridge buses and API Gateways are all per-region, so a
+    // hardcoded region makes it impossible to co-locate with the rest of the
+    // platform — the Business Logic layer (M13–M18) runs in ap-south-2, and a
+    // cross-region M4 cannot see M13–M18 at all (or vice versa). A previous
+    // deploy under this hardcoded value is why `cdk diff` synthesizes an
+    // entirely new stack instead of diffing the real one. Default preserves
+    // the previous literal so nothing breaks for a caller that never set the
+    // env var.
+    region: process.env.CDK_DEFAULT_REGION ?? 'ap-south-1',
   },
 
   // ── Lambda Defaults ──────────────────────────────────────────────────────

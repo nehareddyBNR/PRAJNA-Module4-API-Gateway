@@ -70,15 +70,21 @@ export class PrajnaStorageApi extends Construct {
     };
 
     // ── Upload URL Lambda ─────────────────────────────────────────────────
+    // Pre-compiled JS (SharedLambda cannot run .ts directly on nodejs20.x --
+    // see the guard in shared-lambda.ts). Produced by `npm run build:handlers`
+    // / scripts/build-handlers.mjs, which esbuild-bundles
+    // src/storage/upload-url/index.ts -> dist/storage/upload-url/index.js.
+    // This IS the real, tested handler (S3 pre-signed PUT URL generation) --
+    // it was previously shadowed by an inline `501 Not deployed` stub here,
+    // so every upload request failed regardless of stage; that stub is now
+    // removed (same class of bug as the auth deny-all stub -- see auth-stack.ts).
     this.uploadLambda = new SharedLambda(this, 'UploadUrlLambda', {
       config,
       module,
       identifier: 'upload-url',
       description: 'Generates pre-signed S3 PUT URLs for file uploads',
       entry: path.join(__dirname, '../../src/storage/upload-url/index.ts'),
-      code: lambda.Code.fromInline(
-        'exports.handler = async () => { return { statusCode: 501, body: "Not deployed" }; };'
-      ),
+      code: lambda.Code.fromAsset(path.join(__dirname, '../../dist/storage/upload-url')),
       environment: bucketEnvironment,
       policyStatements: [
         new iam.PolicyStatement({
@@ -89,15 +95,15 @@ export class PrajnaStorageApi extends Construct {
     });
 
     // ── Download URL Lambda ───────────────────────────────────────────────
+    // Same fix as UploadUrlLambda above -- was shadowed by an inline
+    // `501 Not deployed` stub. See scripts/build-handlers.mjs.
     this.downloadLambda = new SharedLambda(this, 'DownloadUrlLambda', {
       config,
       module,
       identifier: 'download-url',
       description: 'Generates pre-signed S3 GET URLs for file downloads',
       entry: path.join(__dirname, '../../src/storage/download-url/index.ts'),
-      code: lambda.Code.fromInline(
-        'exports.handler = async () => { return { statusCode: 501, body: "Not deployed" }; };'
-      ),
+      code: lambda.Code.fromAsset(path.join(__dirname, '../../dist/storage/download-url')),
       environment: bucketEnvironment,
       policyStatements: [
         new iam.PolicyStatement({
@@ -121,6 +127,26 @@ export class PrajnaStorageApi extends Construct {
       module,
       identifier: 'download-lambda-arn',
       description: 'Platform Storage Download URL Lambda ARN',
+      value: this.downloadLambda.functionArn,
+    });
+
+    // Route-discovery params in the M4 resolver convention
+    // /prajna/{stage}/{moduleId}/{routeId}-fn-arn — consumed by
+    // scripts/resolve-routes.ts when it binds /storage/upload-url and
+    // /storage/download-url on the shared gateway (see route-manifest.ts).
+    new SharedParameter(this, 'UploadUrlRouteArnParam', {
+      config,
+      module,
+      identifier: 'upload-url-fn-arn',
+      description: 'Platform Storage Upload URL Lambda ARN (M4 route discovery)',
+      value: this.uploadLambda.functionArn,
+    });
+
+    new SharedParameter(this, 'DownloadUrlRouteArnParam', {
+      config,
+      module,
+      identifier: 'download-url-fn-arn',
+      description: 'Platform Storage Download URL Lambda ARN (M4 route discovery)',
       value: this.downloadLambda.functionArn,
     });
 

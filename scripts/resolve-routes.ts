@@ -96,7 +96,9 @@ async function main() {
   lines.push('## Answers to Bhanu\'s 3 questions');
   lines.push('1. **v2 or v1?** v1 — built on the existing `SharedApi` (apigateway.RestApi) in lib/foundation. Reusing it, not rebuilding as HttpApi. Flag if this is a hard blocker on your side.');
   lines.push('2. **IAM or M2M?** AWS_IAM, as you recommended.');
-  lines.push(`3. **Go-live for /prajna/${stage}/api/api-endpoint?** Published as soon as this stack deploys clean — not gated on bound-route count. All holds are lifted: expected bindable is **30/30** (30 routes over BL's 26 published handler ARNs).`);
+  const totalRoutes = resolved.length;
+  const uniqueArns = new Set(resolved.map((r) => `${r.moduleId}/${r.routeId}`)).size;
+  lines.push(`3. **Go-live for /prajna/${stage}/api/api-endpoint?** Published as soon as this stack deploys clean — not gated on bound-route count. All holds are lifted: expected bindable is **${totalRoutes}/${totalRoutes}** (${totalRoutes} routes over ${uniqueArns} published handler ARNs across BL and M6).`);
   lines.push('');
   lines.push('## After deploying');
   lines.push('');

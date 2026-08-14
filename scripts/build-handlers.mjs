@@ -28,6 +28,16 @@ const HANDLERS = [
     entry: path.join(root, 'src/auth/authorizer/index.ts'),
     outdir: path.join(root, 'dist/auth/authorizer'),
   },
+  {
+    name: 'storage-upload-url',
+    entry: path.join(root, 'src/storage/upload-url/index.ts'),
+    outdir: path.join(root, 'dist/storage/upload-url'),
+  },
+  {
+    name: 'storage-download-url',
+    entry: path.join(root, 'src/storage/download-url/index.ts'),
+    outdir: path.join(root, 'dist/storage/download-url'),
+  },
 ];
 
 async function main() {

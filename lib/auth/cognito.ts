@@ -50,6 +50,29 @@ export class PrajnaCognito extends Construct {
       passwordPolicy,
       removalPolicy: config.isProduction ? RemovalPolicy.RETAIN : RemovalPolicy.DESTROY,
       accountRecovery: cognito.AccountRecovery.EMAIL_ONLY,
+      // OPTIONAL, not REQUIRED: flipping this to required would lock every
+      // existing user out on the next login, since Cognito enforces MFA
+      // setup at sign-in time once required and none of today's users have
+      // enrolled. TOTP only (no SMS) -- SMS MFA needs an SNS origination
+      // identity and, for Indian numbers, DLT sender registration; neither
+      // exists yet, and a "supported" MFA method that silently fails to
+      // deliver is worse than not offering it.
+      //
+      // Recovery when a user loses their authenticator device: Cognito has
+      // no user-facing backup-code mechanism for software-token MFA (unlike
+      // GitHub/Google). The operator-side recovery path is:
+      //   aws cognito-idp admin-set-user-mfa-preference \
+      //     --user-pool-id <pool-id> --username <email> \
+      //     --software-token-mfa-settings Enabled=false,PreferredMfa=false
+      // which clears MFA for that one user so they can sign in and re-enroll.
+      // Requires an admin with IAM access to this user pool -- there is no
+      // self-service recovery, by design (a self-service MFA bypass would
+      // defeat the point of MFA).
+      mfa: cognito.Mfa.OPTIONAL,
+      mfaSecondFactor: {
+        otp: true,
+        sms: false,
+      },
       customAttributes: {
         role: new cognito.StringAttribute({ mutable: true }),
         campus: new cognito.StringAttribute({ mutable: true }),
@@ -72,14 +95,28 @@ export class PrajnaCognito extends Construct {
       })
       .withCustomAttributes('role', 'campus', 'department', 'facultyId');
 
+    // Deliberately NOT withCustomAttributes(...) here -- unlike
+    // clientReadAttributes above, the SPA client must not be able to WRITE
+    // role/campus/department/facultyId on itself. All four are authorization-
+    // relevant: src/auth/authorizer/index.ts falls back to trusting
+    // `custom:role` verbatim whenever a user isn't in a Cognito Group (which
+    // includes every self-signed-up dev user, since selfSignUpEnabled is true
+    // there). With write access granted, any authenticated user could call
+    // Cognito's standard UpdateUserAttributes with their own access token and
+    // set custom:role=ADMIN -- no admin API needed. Found in a security audit
+    // 2026-08-14. These four attributes are now admin-write-only
+    // (AdminUpdateUserAttributes / admin-create-user, which is how every test
+    // user this session was actually provisioned -- this fix does not change
+    // that flow at all). A self-signed-up user who never gets a role assigned
+    // reads back custom:role as unset, which the authorizer already treats as
+    // 'UNKNOWN' (rank -1, lowest possible) -- the safe failure direction.
     const clientWriteAttributes = new cognito.ClientAttributes()
       .withStandardAttributes({
         email: true,
         givenName: true,
         familyName: true,
         phoneNumber: true,
-      })
-      .withCustomAttributes('role', 'campus', 'department', 'facultyId');
+      });
 
     this.webClient = new cognito.UserPoolClient(this, 'WebClient', {
       userPool: this.userPool,

@@ -225,6 +225,28 @@ export class StorageParameters {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Monitoring Parameters
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * SSM parameter paths published by the platform's shared monitoring resources.
+ *
+ * The ops alarm topic is created once in FoundationStack (it has no meaningful
+ * per-module owner) and consumed by every stack that wires up CloudWatch
+ * alarms via {@link SharedAlarm} / {@link AlarmFactory}, so all alarm
+ * notifications land in one place instead of each module inventing its own.
+ */
+export class MonitoringParameters {
+
+  private constructor() {}
+
+  /** The platform-wide ops alarm SNS topic ARN. */
+  static opsAlarmTopicArn(stage: Stage): string {
+    return ResourceNames.ssmParameter(stage, ModuleIdentifier.MONITORING, 'ops-alarm-topic-arn');
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Notification Parameters (Module 16)
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -329,6 +351,7 @@ export const SsmPaths = {
   Api: ApiParameters,
   Database: DatabaseParameters,
   Storage: StorageParameters,
+  Monitoring: MonitoringParameters,
   Notification: NotificationParameters,
   Approval: ApprovalParameters,
 } as const;

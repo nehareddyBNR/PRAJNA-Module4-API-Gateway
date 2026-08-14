@@ -51,6 +51,20 @@ export interface RouteDefinition {
 }
 
 // ─────────────────────────────────────────────────────────────────────────
+// M6 — Storage (2 routes)
+//
+// Pre-signed URL generators in the storage stack (prajna-m4/lib/storage/api.ts).
+// The Lambdas are platform-owned (M6) — distinct from M10's awards upload
+// which owns /faculty/documents/upload-url on the faculty resource. These bind
+// at the top level under /storage/*, consistent with M13-M18's top-level paths.
+// Both read a JSON body, so both are POST.
+// ─────────────────────────────────────────────────────────────────────────
+const STORAGE_ROUTES: RouteDefinition[] = [
+  { moduleId: ModuleIdentifier.STORAGE, routeId: 'upload-url', method: 'POST', path: '/storage/upload-url', auth: RouteAuth.JWT },
+  { moduleId: ModuleIdentifier.STORAGE, routeId: 'download-url', method: 'POST', path: '/storage/download-url', auth: RouteAuth.JWT },
+];
+
+// ─────────────────────────────────────────────────────────────────────────
 // M13 — Approval (7 routes)
 // ─────────────────────────────────────────────────────────────────────────
 const APPROVAL_ROUTES: RouteDefinition[] = [
@@ -139,8 +153,9 @@ const APAR_ROUTES: RouteDefinition[] = [
   { moduleId: ModuleIdentifier.APAR, routeId: 'calculate-score', method: 'GET', path: '/apar/score/{facultyId}/{year}', auth: RouteAuth.JWT },
 ];
 
-/** All 30 routes across M13–M18, resolving to BL's 26 published handler ARNs. */
+/** All routes across M6, M13–M18, resolving to the modules' published handler ARNs. */
 export const ROUTE_MANIFEST: RouteDefinition[] = [
+  ...STORAGE_ROUTES,
   ...APPROVAL_ROUTES,
   ...SCORE_ROUTES,
   ...LEADERBOARD_ROUTES,
