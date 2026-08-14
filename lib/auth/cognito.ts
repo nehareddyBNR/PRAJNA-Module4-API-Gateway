@@ -95,14 +95,28 @@ export class PrajnaCognito extends Construct {
       })
       .withCustomAttributes('role', 'campus', 'department', 'facultyId');
 
+    // Deliberately NOT withCustomAttributes(...) here -- unlike
+    // clientReadAttributes above, the SPA client must not be able to WRITE
+    // role/campus/department/facultyId on itself. All four are authorization-
+    // relevant: src/auth/authorizer/index.ts falls back to trusting
+    // `custom:role` verbatim whenever a user isn't in a Cognito Group (which
+    // includes every self-signed-up dev user, since selfSignUpEnabled is true
+    // there). With write access granted, any authenticated user could call
+    // Cognito's standard UpdateUserAttributes with their own access token and
+    // set custom:role=ADMIN -- no admin API needed. Found in a security audit
+    // 2026-08-14. These four attributes are now admin-write-only
+    // (AdminUpdateUserAttributes / admin-create-user, which is how every test
+    // user this session was actually provisioned -- this fix does not change
+    // that flow at all). A self-signed-up user who never gets a role assigned
+    // reads back custom:role as unset, which the authorizer already treats as
+    // 'UNKNOWN' (rank -1, lowest possible) -- the safe failure direction.
     const clientWriteAttributes = new cognito.ClientAttributes()
       .withStandardAttributes({
         email: true,
         givenName: true,
         familyName: true,
         phoneNumber: true,
-      })
-      .withCustomAttributes('role', 'campus', 'department', 'facultyId');
+      });
 
     this.webClient = new cognito.UserPoolClient(this, 'WebClient', {
       userPool: this.userPool,
