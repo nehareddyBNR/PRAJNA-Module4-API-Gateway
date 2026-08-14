@@ -20,11 +20,15 @@
 
 import { Annotations, CfnOutput, Stack, StackProps } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
+import * as ssm from 'aws-cdk-lib/aws-ssm';
+import * as sns from 'aws-cdk-lib/aws-sns';
 import { PrajnaEnvironmentConfig } from '../foundation/config/environment';
 import { ModuleIdentifier } from '../foundation/constants/naming';
 import { PLATFORM_VERSION } from '../foundation/constants/defaults';
+import { MonitoringParameters } from '../foundation/constants/ssm-parameters';
 import { PrajnaTags } from '../foundation/tags/tags';
 import { requireNonEmpty } from '../foundation/utils/validation';
+import { AlarmFactory } from '../foundation/monitoring/alarms';
 import { PrajnaStorageBuckets } from './buckets';
 import { PrajnaStorageOutputs } from './outputs';
 import { PrajnaStorageApi } from './api';
@@ -114,6 +118,16 @@ export class StorageStack extends Stack {
       value: this.api.downloadLambda.functionArn,
       description: 'Prajna Platform Download URL Lambda ARN',
     });
+
+    // ── Alarms ───────────────────────────────────────────────────────────
+    const opsAlarmTopicArn = ssm.StringParameter.valueForStringParameter(
+      this,
+      MonitoringParameters.opsAlarmTopicArn(config.stage),
+    );
+    const opsAlarmTopic = sns.Topic.fromTopicArn(this, 'ImportedOpsAlarmTopic', opsAlarmTopicArn);
+
+    AlarmFactory.forLambda(this, config, module, 'upload-url', this.api.uploadLambda.function, opsAlarmTopic);
+    AlarmFactory.forLambda(this, config, module, 'download-url', this.api.downloadLambda.function, opsAlarmTopic);
 
     // ── Tagging ───────────────────────────────────────────────────────────
     PrajnaTags.applyToStack(this, stage, module);

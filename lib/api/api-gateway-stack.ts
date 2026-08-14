@@ -14,9 +14,13 @@
 
 import { Construct } from 'constructs';
 import { Stack, StackProps, Annotations } from 'aws-cdk-lib';
+import * as ssm from 'aws-cdk-lib/aws-ssm';
+import * as sns from 'aws-cdk-lib/aws-sns';
 import { PrajnaEnvironmentConfig } from '../foundation/config/environment';
 import { ModuleIdentifier } from '../foundation/constants/naming';
+import { MonitoringParameters } from '../foundation/constants/ssm-parameters';
 import { SharedApi } from '../foundation/constructs/shared-api';
+import { AlarmFactory } from '../foundation/monitoring/alarms';
 import { ApiAuthorizer } from './api-authorizer';
 import { RouteManager } from './route-manager';
 import { ApiWaf } from './waf';
@@ -72,5 +76,14 @@ export class ApiGatewayStack extends Stack {
       config,
       restApi: this.sharedApi.api,
     });
+
+    // ── Alarms ─────────────────────────────────────────────────────────
+    const opsAlarmTopicArn = ssm.StringParameter.valueForStringParameter(
+      this,
+      MonitoringParameters.opsAlarmTopicArn(config.stage),
+    );
+    const opsAlarmTopic = sns.Topic.fromTopicArn(this, 'ImportedOpsAlarmTopic', opsAlarmTopicArn);
+
+    AlarmFactory.forApiGateway(this, config, ModuleIdentifier.API, 'platform', this.sharedApi.apiName, opsAlarmTopic);
   }
 }

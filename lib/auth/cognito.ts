@@ -50,6 +50,29 @@ export class PrajnaCognito extends Construct {
       passwordPolicy,
       removalPolicy: config.isProduction ? RemovalPolicy.RETAIN : RemovalPolicy.DESTROY,
       accountRecovery: cognito.AccountRecovery.EMAIL_ONLY,
+      // OPTIONAL, not REQUIRED: flipping this to required would lock every
+      // existing user out on the next login, since Cognito enforces MFA
+      // setup at sign-in time once required and none of today's users have
+      // enrolled. TOTP only (no SMS) -- SMS MFA needs an SNS origination
+      // identity and, for Indian numbers, DLT sender registration; neither
+      // exists yet, and a "supported" MFA method that silently fails to
+      // deliver is worse than not offering it.
+      //
+      // Recovery when a user loses their authenticator device: Cognito has
+      // no user-facing backup-code mechanism for software-token MFA (unlike
+      // GitHub/Google). The operator-side recovery path is:
+      //   aws cognito-idp admin-set-user-mfa-preference \
+      //     --user-pool-id <pool-id> --username <email> \
+      //     --software-token-mfa-settings Enabled=false,PreferredMfa=false
+      // which clears MFA for that one user so they can sign in and re-enroll.
+      // Requires an admin with IAM access to this user pool -- there is no
+      // self-service recovery, by design (a self-service MFA bypass would
+      // defeat the point of MFA).
+      mfa: cognito.Mfa.OPTIONAL,
+      mfaSecondFactor: {
+        otp: true,
+        sms: false,
+      },
       customAttributes: {
         role: new cognito.StringAttribute({ mutable: true }),
         campus: new cognito.StringAttribute({ mutable: true }),

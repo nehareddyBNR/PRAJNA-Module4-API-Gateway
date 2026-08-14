@@ -1,11 +1,14 @@
 import { Annotations, CfnOutput, Stack, StackProps } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
+import * as sns from 'aws-cdk-lib/aws-sns';
 import { PrajnaEnvironmentConfig } from '../foundation/config/environment';
 import { ModuleIdentifier } from '../foundation/constants/naming';
 import { ResourceNames } from '../foundation/constants/resource-names';
 import { PLATFORM_VERSION } from '../foundation/constants/defaults';
 import { PrajnaTags } from '../foundation/tags/tags';
 import { requireNonEmpty } from '../foundation/utils/validation';
+import { AlarmFactory } from '../foundation/monitoring/alarms';
+import { SharedParameter } from '../foundation/constructs/shared-parameter';
 import { PrajnaCognito } from './cognito';
 import { PrajnaCognitoGroups } from './groups';
 import { PrajnaAuthOutputs } from './outputs';
@@ -36,6 +39,20 @@ export class AuthStack extends Stack {
 
   /** The API Gateway Lambda Authorizer construct. */
   public readonly authorizer: PrajnaAuthorizer;
+
+  /**
+   * The platform-wide ops alarm topic. Every {@link AlarmFactory}-created
+   * alarm across every module notifies here, so on-call has one place to
+   * subscribe instead of per-module topics. Owned here (not FoundationStack)
+   * because `Prajna-Dev-Foundation` is stuck in `REVIEW_IN_PROGRESS` with an
+   * unexecuted changeset that would try to recreate the already-live
+   * EventBridge bus and fail — see AGENTS.md §8 item 9. AuthStack deploys
+   * cleanly and deploys before Storage/Api in bin/prajna.ts, so it's a safe
+   * home for this until Foundation is fixed. Subscribe an email/SMS/
+   * PagerDuty endpoint to this topic per stage — not done automatically,
+   * since who gets paged is an operational decision, not an infra one.
+   */
+  public readonly opsAlarmTopic: sns.Topic;
 
   constructor(scope: Construct, id: string, props: AuthStackProps) {
     super(scope, id, props);
@@ -98,6 +115,38 @@ export class AuthStack extends Stack {
       value: this.authorizer.lambdaFunction.functionArn,
       description: 'Prajna Platform Authorizer Lambda ARN',
     });
+
+    // ── Ops Alarm Topic ──────────────────────────────────────────────────
+    // See the opsAlarmTopic doc comment for why this lives here instead of
+    // FoundationStack. Module tagged MONITORING even though physically
+    // created in the Auth stack, since "auth owns platform alerting" would
+    // be a misleading tag for anyone reading CloudWatch/SNS resource tags.
+    this.opsAlarmTopic = new sns.Topic(this, 'OpsAlarmTopic', {
+      topicName: ResourceNames.snsTopic(config.stage, ModuleIdentifier.MONITORING, 'ops-alarms'),
+      displayName: `[${config.stage.toUpperCase()}] PRAJNA Ops Alarms`,
+    });
+
+    new SharedParameter(this, 'OpsAlarmTopicArnParam', {
+      config,
+      module: ModuleIdentifier.MONITORING,
+      identifier: 'ops-alarm-topic-arn',
+      description: 'Platform-wide CloudWatch alarm notification topic ARN',
+      value: this.opsAlarmTopic.topicArn,
+    });
+
+    // ── Alarms ───────────────────────────────────────────────────────────
+    // The authorizer sits in front of EVERY authenticated request on the
+    // platform -- an elevated error rate here is a platform-wide outage,
+    // not a module-local one, so it gets alarmed even though this stack
+    // owns no other alarmed resources.
+    AlarmFactory.forLambda(
+      this,
+      config,
+      module,
+      'authorizer',
+      this.authorizer.lambdaFunction.function,
+      this.opsAlarmTopic,
+    );
 
     // ── Tagging ──────────────────────────────────────────────────────────
     PrajnaTags.applyToStack(this, stage, module);
