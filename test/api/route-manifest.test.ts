@@ -1,8 +1,8 @@
 import { ROUTE_MANIFEST, bindableRoutes, heldRoutes } from '../../lib/api/route-manifest';
 
 describe('Module 4 route manifest', () => {
-  it('contains exactly 30 routes', () => {
-    expect(ROUTE_MANIFEST.length).toBe(30);
+  it('contains exactly 32 routes', () => {
+    expect(ROUTE_MANIFEST.length).toBe(32);
   });
 
   it('holds nothing — the M16 and M18 holds lifted once BL deleted its own gateways', () => {
@@ -11,7 +11,7 @@ describe('Module 4 route manifest', () => {
 
   it('binds every route in the manifest', () => {
     const bindable = bindableRoutes();
-    expect(bindable.length).toBe(30);
+    expect(bindable.length).toBe(32);
     expect(bindable.every((r) => !r.hold)).toBe(true);
   });
 
@@ -33,9 +33,9 @@ describe('Module 4 route manifest', () => {
     expect(new Set(keys).size).toBe(keys.length);
   });
 
-  it('resolves to the 26 handler ARNs BL publishes', () => {
+  it('resolves to the 28 handler ARNs BL and M6 publish', () => {
     const arns = new Set(ROUTE_MANIFEST.map((r) => `${r.moduleId}/${r.routeId}`));
-    expect(arns.size).toBe(26);
+    expect(arns.size).toBe(28);
   });
 
   // B-103 / B-059: M13 owns the APAR review chain; BL deleted these handlers,

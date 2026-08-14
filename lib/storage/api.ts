@@ -130,6 +130,26 @@ export class PrajnaStorageApi extends Construct {
       value: this.downloadLambda.functionArn,
     });
 
+    // Route-discovery params in the M4 resolver convention
+    // /prajna/{stage}/{moduleId}/{routeId}-fn-arn — consumed by
+    // scripts/resolve-routes.ts when it binds /storage/upload-url and
+    // /storage/download-url on the shared gateway (see route-manifest.ts).
+    new SharedParameter(this, 'UploadUrlRouteArnParam', {
+      config,
+      module,
+      identifier: 'upload-url-fn-arn',
+      description: 'Platform Storage Upload URL Lambda ARN (M4 route discovery)',
+      value: this.uploadLambda.functionArn,
+    });
+
+    new SharedParameter(this, 'DownloadUrlRouteArnParam', {
+      config,
+      module,
+      identifier: 'download-url-fn-arn',
+      description: 'Platform Storage Download URL Lambda ARN (M4 route discovery)',
+      value: this.downloadLambda.functionArn,
+    });
+
     // ── Tagging ───────────────────────────────────────────────────────────
     PrajnaTags.applyToStack(this, config.stage, module);
   }

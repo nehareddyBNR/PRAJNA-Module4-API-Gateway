@@ -45,7 +45,7 @@ export const devConfig: PrajnaEnvironmentConfig = {
     // entirely new stack instead of diffing the real one. Default preserves
     // the previous literal so nothing breaks for a caller that never set the
     // env var.
-    region: process.env.CDK_DEFAULT_REGION || 'ap-south-1',
+    region: process.env.CDK_DEFAULT_REGION ?? 'ap-south-1',
   },
 
   // ── Lambda Defaults ──────────────────────────────────────────────────────
